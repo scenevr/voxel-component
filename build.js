@@ -21,6 +21,9 @@ AFRAME.registerComponent('voxel', {
 
   schema: {
     src: {
+    },
+    ambientOcclusion: {
+      default: true
     }
   },
 
@@ -62,6 +65,11 @@ AFRAME.registerComponent('voxel', {
         }
       }
     }
+
+    var material = this.el.components.material.material;
+    material.setValues({
+      vertexColors: THREE.VertexColors
+    });
 
     // Create mesh
     var vertData = createAOMesh(voxelsWithPadding);
@@ -115,14 +123,17 @@ AFRAME.registerComponent('voxel', {
       var f = new THREE.Face3( face + 0, face + 1, face + 2 )
       // f.vertexColors = [new THREE.Color(vertData[i - 8 + 3]), new THREE.Color('#00ff00'), new THREE.Color('#0000ff')]
 
-      f.vertexColors = [
-        // new THREE.Color(palette[texture]),
-        // new THREE.Color(palette[texture]),
-        // new THREE.Color(palette[texture])
-        new THREE.Color().setHSL(0, 0, vertData[i - 24 + 3] / 255.0),
-        new THREE.Color().setHSL(0, 0, vertData[i - 16 + 3] / 255.0),
-        new THREE.Color().setHSL(0, 0, vertData[i - 8 + 3] / 255.0)
-      ]
+      if (this.data.ambientOcclusion) {
+        f.vertexColors = [
+          // new THREE.Color(palette[texture]),
+          // new THREE.Color(palette[texture]),
+          // new THREE.Color(palette[texture])
+          new THREE.Color().setHSL(0, 0, vertData[i - 24 + 3] / 255.0),
+          new THREE.Color().setHSL(0, 0, vertData[i - 16 + 3] / 255.0),
+          new THREE.Color().setHSL(0, 0, vertData[i - 8 + 3] / 255.0)
+        ]
+      }
+
       geometry.faces.push(f)
       uvs.push(uvSet) // [new THREE.Vector2(1,1), new THREE.Vector2(0, 1), new THREE.Vector2(0, 0)])
       collisionIndices.push(face + 0, face + 1, face + 2)
@@ -133,7 +144,7 @@ AFRAME.registerComponent('voxel', {
     geometry.computeFaceNormals();
     geometry.computeVertexNormals();
 
-    this.mesh = new THREE.Mesh(geometry, this.el.components.material.material);
+    this.mesh = new THREE.Mesh(geometry, material); 
     this.el.setObject3D('mesh', this.mesh);
   },
 
