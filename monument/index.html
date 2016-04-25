@@ -1,0 +1,19 @@
+<html>
+  <head>
+    <title>A-Frame Voxel Component - Basic</title>
+    <script src="../build.js"></script>
+  </head>
+  <body>
+    <a-scene>
+      <a-assets></a-assets>
+
+      <a-entity light='type: ambient; color: #777'></a-entity>
+      <a-entity light='type: point; angle: 45; color: #ffffff; intensity: 0.9' position='100 100 100'></a-entity>
+
+      <a-sky rotation='0 -45 0' src='https://www.scenevr.com/prerelease/images/sky.png'></a-sky>
+      <a-entity static-body rotation='-90 0 0' geometry='primitive: plane; width: 1024; height: 1024;' material="repeat: 1024 1024; src: url(https://www.scenevr.com/prerelease/images/grid.png);"></a-entity>
+
+      <a-entity scale="0.3 0.3 0.3" position="-1 0 -30" voxel="src: monument.vox" material="color: #05f"></a-entity>
+    </a-scene>
+  </body>
+</html>
