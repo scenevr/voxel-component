@@ -12,6 +12,8 @@ var zeros = require('zeros');
  * Voxel component for A-Frame.
  */
 AFRAME.registerComponent('voxel', {
+  dependencies: ['material'],
+
   schema: {
     src: {
     }
@@ -126,7 +128,7 @@ AFRAME.registerComponent('voxel', {
     geometry.computeFaceNormals();
     geometry.computeVertexNormals();
 
-    this.mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: '#f70'}));
+    this.mesh = new THREE.Mesh(geometry, this.el.components.material.material);
     this.el.setObject3D('mesh', this.mesh);
   },
 
