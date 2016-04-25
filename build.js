@@ -12,6 +12,7 @@ var createAOMesh = require('ao-mesher');
 var ndarray = require('ndarray');
 var voxToNdarray = require('vox-to-ndarray');
 var zeros = require('zeros');
+var palette = require('./palette');
 
 /**
  * Voxel component for A-Frame.
@@ -24,6 +25,9 @@ AFRAME.registerComponent('voxel', {
     },
     ambientOcclusion: {
       default: true
+    },
+    color: {
+      default: false
     }
   },
 
@@ -32,7 +36,7 @@ AFRAME.registerComponent('voxel', {
    */
   init: function () {
     var self = this;
-    
+
     var r = new XMLHttpRequest();
     r.onload = function () {
       console.log(r.response.byteLength);
@@ -60,13 +64,20 @@ AFRAME.registerComponent('voxel', {
         for (z = 0; z < this.resolution[2]; z++) {
           // fixme - copy a row at a time for speeed
           var v = this.voxels.get(x, y, z);
-          v = v ? (1 << 15) + 1 : 0;
+          v = v ? (1 << 15 | v) : 0;
           voxelsWithPadding.set(x + 1, y + 1, z + 1, v);
         }
       }
     }
 
-    var material = this.el.components.material.material;
+    var material;
+
+    if (this.el.hasAttribute('material')) {
+      material = this.el.components.material.material;
+    } else {
+      material = new THREE.MeshLambertMaterial();
+    }
+
     material.setValues({
       vertexColors: THREE.VertexColors
     });
@@ -121,17 +132,25 @@ AFRAME.registerComponent('voxel', {
       i += 8
 
       var f = new THREE.Face3( face + 0, face + 1, face + 2 )
-      // f.vertexColors = [new THREE.Color(vertData[i - 8 + 3]), new THREE.Color('#00ff00'), new THREE.Color('#0000ff')]
 
-      if (this.data.ambientOcclusion) {
+      if (this.data.color && this.data.ambientOcclusion){
         f.vertexColors = [
-          // new THREE.Color(palette[texture]),
-          // new THREE.Color(palette[texture]),
-          // new THREE.Color(palette[texture])
+          palette[texture].clone().multiplyScalar(vertData[i - 24 + 3] / 255.0),
+          palette[texture].clone().multiplyScalar(vertData[i - 16 + 3] / 255.0),
+          palette[texture].clone().multiplyScalar(vertData[i - 8 + 3] / 255.0)
+        ];
+      } else if (this.data.color) {
+        f.vertexColors = [
+          palette[texture],
+          palette[texture],
+          palette[texture]
+        ];
+      } else if (this.data.ambientOcclusion) {
+        f.vertexColors = [
           new THREE.Color().setHSL(0, 0, vertData[i - 24 + 3] / 255.0),
           new THREE.Color().setHSL(0, 0, vertData[i - 16 + 3] / 255.0),
           new THREE.Color().setHSL(0, 0, vertData[i - 8 + 3] / 255.0)
-        ]
+        ];
       }
 
       geometry.faces.push(f)
@@ -178,7 +197,7 @@ AFRAME.registerComponent('voxel', {
   play: function () { },
 });
 
-},{"ao-mesher":4,"ndarray":27,"vox-to-ndarray":30,"zeros":31}],3:[function(require,module,exports){
+},{"./palette":32,"ao-mesher":4,"ndarray":27,"vox-to-ndarray":30,"zeros":31}],3:[function(require,module,exports){
 (function (global){
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.AFRAME = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
 'use strict';
@@ -66391,8 +66410,8 @@ function generateArray (vox) {
   assert.equal(data.getUint32(20, true), 1163544915)
 
   var resolutionX = data.getUint32(32, true) + 1
-  var resolutionY = data.getUint32(36, true) + 1
-  var resolutionZ = data.getUint32(40, true) + 1
+  var resolutionY = data.getUint32(40, true) + 1
+  var resolutionZ = data.getUint32(36, true) + 1
 
   assert.equal(data.getUint32(44, true), 1230657880)
 
@@ -66464,4 +66483,34 @@ module.exports = function zeros(shape, dtype) {
   return ndarray(new (dtypeToType(dtype))(sz), shape);
 }
 
-},{"ndarray":27}]},{},[1]);
+},{"ndarray":27}],32:[function(require,module,exports){
+// from https://voxel.codeplex.com/wikipage?title=Sample%20Codes&referringTitle=VOX%20Format
+
+// fixme - recompute.
+
+module.exports = [
+    0x000000, 0xffffff, 0xccffff, 0x99ffff, 0x66ffff, 0x33ffff, 0x00ffff, 0xffccff, 0xccccff, 0x99ccff, 0x66ccff, 0x33ccff, 0x00ccff, 0xff99ff, 0xcc99ff, 0x9999ff,
+    0x6699ff, 0x3399ff, 0x0099ff, 0xff66ff, 0xcc66ff, 0x9966ff, 0x6666ff, 0x3366ff, 0x0066ff, 0xff33ff, 0xcc33ff, 0x9933ff, 0x6633ff, 0x3333ff, 0x0033ff, 0xff00ff,
+    0xcc00ff, 0x9900ff, 0x6600ff, 0x3300ff, 0x0000ff, 0xffffcc, 0xccffcc, 0x99ffcc, 0x66ffcc, 0x33ffcc, 0x00ffcc, 0xffcccc, 0xcccccc, 0x99cccc, 0x66cccc, 0x33cccc,
+    0x00cccc, 0xff99cc, 0xcc99cc, 0x9999cc, 0x6699cc, 0x3399cc, 0x0099cc, 0xff66cc, 0xcc66cc, 0x9966cc, 0x6666cc, 0x3366cc, 0x0066cc, 0xff33cc, 0xcc33cc, 0x9933cc,
+    0x6633cc, 0x3333cc, 0x0033cc, 0xff00cc, 0xcc00cc, 0x9900cc, 0x6600cc, 0x3300cc, 0x0000cc, 0xffff99, 0xccff99, 0x99ff99, 0x66ff99, 0x33ff99, 0x00ff99, 0xffcc99,
+    0xcccc99, 0x99cc99, 0x66cc99, 0x33cc99, 0x00cc99, 0xff9999, 0xcc9999, 0x999999, 0x669999, 0x339999, 0x009999, 0xff6699, 0xcc6699, 0x996699, 0x666699, 0x336699,
+    0x006699, 0xff3399, 0xcc3399, 0x993399, 0x663399, 0x333399, 0x003399, 0xff0099, 0xcc0099, 0x990099, 0x660099, 0x330099, 0x000099, 0xffff66, 0xccff66, 0x99ff66,
+    0x66ff66, 0x33ff66, 0x00ff66, 0xffcc66, 0xcccc66, 0x99cc66, 0x66cc66, 0x33cc66, 0x00cc66, 0xff9966, 0xcc9966, 0x999966, 0x669966, 0x339966, 0x009966, 0xff6666,
+    0xcc6666, 0x996666, 0x666666, 0x336666, 0x006666, 0xff3366, 0xcc3366, 0x993366, 0x663366, 0x333366, 0x003366, 0xff0066, 0xcc0066, 0x990066, 0x660066, 0x330066,
+    0x000066, 0xffff33, 0xccff33, 0x99ff33, 0x66ff33, 0x33ff33, 0x00ff33, 0xffcc33, 0xcccc33, 0x99cc33, 0x66cc33, 0x33cc33, 0x00cc33, 0xff9933, 0xcc9933, 0x999933,
+    0x669933, 0x339933, 0x009933, 0xff6633, 0xcc6633, 0x996633, 0x666633, 0x336633, 0x006633, 0xff3333, 0xcc3333, 0x993333, 0x663333, 0x333333, 0x003333, 0xff0033,
+    0xcc0033, 0x990033, 0x660033, 0x330033, 0x000033, 0xffff00, 0xccff00, 0x99ff00, 0x66ff00, 0x33ff00, 0x00ff00, 0xffcc00, 0xcccc00, 0x99cc00, 0x66cc00, 0x33cc00,
+    0x00cc00, 0xff9900, 0xcc9900, 0x999900, 0x669900, 0x339900, 0x009900, 0xff6600, 0xcc6600, 0x996600, 0x666600, 0x336600, 0x006600, 0xff3300, 0xcc3300, 0x993300,
+    0x663300, 0x333300, 0x003300, 0xff0000, 0xcc0000, 0x990000, 0x660000, 0x330000, 0x0000ee, 0x0000dd, 0x0000bb, 0x0000aa, 0x000088, 0x000077, 0x000055, 0x000044,
+    0x000022, 0x000011, 0x00ee00, 0x00dd00, 0x00bb00, 0x00aa00, 0x008800, 0x007700, 0x005500, 0x004400, 0x002200, 0x001100, 0xee0000, 0xdd0000, 0xbb0000, 0xaa0000,
+    0x880000, 0x770000, 0x550000, 0x440000, 0x220000, 0x110000, 0xeeeeee, 0xdddddd, 0xbbbbbb, 0xaaaaaa, 0x888888, 0x777777, 0x555555, 0x444444, 0x222222, 0x111111
+].map(function (c) { 
+  var c1 = new THREE.Color(c);
+  var c2 = new THREE.Color();
+  c2.r = c1.b;
+  c2.g = c1.g;
+  c2.b = c1.r;
+  return c2;
+})
+},{}]},{},[1]);
