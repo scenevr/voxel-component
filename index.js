@@ -7,6 +7,7 @@ var createAOMesh = require('ao-mesher');
 var ndarray = require('ndarray');
 var voxToNdarray = require('vox-to-ndarray');
 var zeros = require('zeros');
+var palette = require('./palette');
 
 /**
  * Voxel component for A-Frame.
@@ -19,6 +20,9 @@ AFRAME.registerComponent('voxel', {
     },
     ambientOcclusion: {
       default: true
+    },
+    color: {
+      default: false
     }
   },
 
@@ -27,7 +31,7 @@ AFRAME.registerComponent('voxel', {
    */
   init: function () {
     var self = this;
-    
+
     var r = new XMLHttpRequest();
     r.onload = function () {
       console.log(r.response.byteLength);
@@ -55,13 +59,20 @@ AFRAME.registerComponent('voxel', {
         for (z = 0; z < this.resolution[2]; z++) {
           // fixme - copy a row at a time for speeed
           var v = this.voxels.get(x, y, z);
-          v = v ? (1 << 15) + 1 : 0;
+          v = v ? (1 << 15 | v) : 0;
           voxelsWithPadding.set(x + 1, y + 1, z + 1, v);
         }
       }
     }
 
-    var material = this.el.components.material.material;
+    var material;
+
+    if (this.el.hasAttribute('material')) {
+      material = this.el.components.material.material;
+    } else {
+      material = new THREE.MeshLambertMaterial();
+    }
+
     material.setValues({
       vertexColors: THREE.VertexColors
     });
@@ -116,17 +127,25 @@ AFRAME.registerComponent('voxel', {
       i += 8
 
       var f = new THREE.Face3( face + 0, face + 1, face + 2 )
-      // f.vertexColors = [new THREE.Color(vertData[i - 8 + 3]), new THREE.Color('#00ff00'), new THREE.Color('#0000ff')]
 
-      if (this.data.ambientOcclusion) {
+      if (this.data.color && this.data.ambientOcclusion){
         f.vertexColors = [
-          // new THREE.Color(palette[texture]),
-          // new THREE.Color(palette[texture]),
-          // new THREE.Color(palette[texture])
+          palette[texture].clone().multiplyScalar(vertData[i - 24 + 3] / 255.0),
+          palette[texture].clone().multiplyScalar(vertData[i - 16 + 3] / 255.0),
+          palette[texture].clone().multiplyScalar(vertData[i - 8 + 3] / 255.0)
+        ];
+      } else if (this.data.color) {
+        f.vertexColors = [
+          palette[texture],
+          palette[texture],
+          palette[texture]
+        ];
+      } else if (this.data.ambientOcclusion) {
+        f.vertexColors = [
           new THREE.Color().setHSL(0, 0, vertData[i - 24 + 3] / 255.0),
           new THREE.Color().setHSL(0, 0, vertData[i - 16 + 3] / 255.0),
           new THREE.Color().setHSL(0, 0, vertData[i - 8 + 3] / 255.0)
-        ]
+        ];
       }
 
       geometry.faces.push(f)
