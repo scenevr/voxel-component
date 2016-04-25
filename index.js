@@ -1,17 +1,134 @@
+/* globals THREE, XMLHttpRequest */
 if (typeof AFRAME === 'undefined') {
   throw new Error('Component attempted to register before AFRAME was available.');
 }
 
+var createAOMesh = require('ao-mesher');
+var ndarray = require('ndarray');
+var voxToNdarray = require('vox-to-ndarray');
+var zeros = require('zeros');
+
 /**
- * Example component for A-Frame.
+ * Voxel component for A-Frame.
  */
-AFRAME.registerComponent('example', {
-  schema: { },
+AFRAME.registerComponent('voxel', {
+  schema: {
+    src: {
+    }
+  },
 
   /**
    * Called once when component is attached. Generally for initial setup.
    */
-  init: function () { },
+  init: function () {
+    var self = this;
+    
+    var r = new XMLHttpRequest();
+    r.onload = function () {
+      console.log(r.response.byteLength);
+      self.loadVox(r.response);
+    };
+    r.responseType = 'arraybuffer';
+    r.open('GET', this.data.src);
+    r.send();
+  },
+
+  loadVox: function (buffer) {
+    this.voxels = voxToNdarray(buffer);
+    this.resolution = this.voxels.shape;
+    this.generateMeshFromVoxels();
+  },
+
+  generateMeshFromVoxels: function () {
+    var padding = this.resolution.map((r) => r + 2);
+    var voxelsWithPadding = zeros(padding, 'int32');
+
+    var x, y, z;
+
+    for (x = 0; x < this.resolution[0]; x++) {
+      for (y = 0; y < this.resolution[1]; y++) {
+        for (z = 0; z < this.resolution[2]; z++) {
+          // fixme - copy a row at a time for speeed
+          var v = this.voxels.get(x, y, z);
+          v = v ? (1 << 15) + 1 : 0;
+          voxelsWithPadding.set(x + 1, y + 1, z + 1, v);
+        }
+      }
+    }
+
+    // Create mesh
+    var vertData = createAOMesh(voxelsWithPadding);
+
+    // Create geometry
+    var geometry = new THREE.Geometry();
+    var face = 0;
+    var collisionVertices = [];
+    var collisionIndices = [];
+    var vertices = new Float32Array(vertData.length / 8);
+
+    var uvs = geometry.faceVertexUvs[0] = [];
+
+    var i = 0;
+    var j = 0;
+    while (i < vertData.length) {
+      var v = new THREE.Vector3(-this.resolution[0] / 2, 0, -this.resolution[0] / 2).round();
+      var s = 1.0;
+      var texture = vertData[i + 7];
+
+      var uvSet = [];
+      var uv;
+
+      uv = new THREE.Vector2();
+      uv.x = vertices[j++] = vertData[i + 0] + v.x
+      uv.y = vertices[j++] = vertData[i + 1] + v.y
+      uv.x += vertices[j++] = vertData[i + 2] + v.z
+      geometry.vertices.push(new THREE.Vector3(vertData[i + 0], vertData[i + 1], vertData[i + 2]).add(v).multiplyScalar(s))
+      collisionVertices.push((vertData[i + 0] + v.x) * s, (vertData[i + 1] + v.y) * s, (vertData[i + 2] + v.z) * s)
+      uvSet.push(uv)
+      i += 8
+
+      uv = new THREE.Vector2()
+      uv.x = vertices[j++] = vertData[i + 0] + v.x
+      uv.y = vertices[j++] = vertData[i + 1] + v.y
+      uv.x += vertices[j++] = vertData[i + 2] + v.z
+      geometry.vertices.push(new THREE.Vector3(vertData[i + 0], vertData[i + 1], vertData[i + 2]).add(v).multiplyScalar(s))
+      collisionVertices.push((vertData[i + 0] + v.x) * s, (vertData[i + 1] + v.y) * s, (vertData[i + 2] + v.z) * s)
+      uvSet.push(uv)
+      i += 8
+
+      uv = new THREE.Vector2()
+      uv.x = vertices[j++] = vertData[i + 0] + v.x
+      uv.y = vertices[j++] = vertData[i + 1] + v.y
+      uv.x += vertices[j++] = vertData[i + 2] + v.z
+      geometry.vertices.push(new THREE.Vector3(vertData[i + 0], vertData[i + 1], vertData[i + 2]).add(v).multiplyScalar(s))
+      collisionVertices.push((vertData[i + 0] + v.x) * s, (vertData[i + 1] + v.y) * s, (vertData[i + 2] + v.z) * s)
+      uvSet.push(uv)
+      i += 8
+
+      var f = new THREE.Face3( face + 0, face + 1, face + 2 )
+      // f.vertexColors = [new THREE.Color(vertData[i - 8 + 3]), new THREE.Color('#00ff00'), new THREE.Color('#0000ff')]
+
+      f.vertexColors = [
+        // new THREE.Color(palette[texture]),
+        // new THREE.Color(palette[texture]),
+        // new THREE.Color(palette[texture])
+        new THREE.Color().setHSL(0, 0, vertData[i - 24 + 3] / 255.0),
+        new THREE.Color().setHSL(0, 0, vertData[i - 16 + 3] / 255.0),
+        new THREE.Color().setHSL(0, 0, vertData[i - 8 + 3] / 255.0)
+      ]
+      geometry.faces.push(f)
+      uvs.push(uvSet) // [new THREE.Vector2(1,1), new THREE.Vector2(0, 1), new THREE.Vector2(0, 0)])
+      collisionIndices.push(face + 0, face + 1, face + 2)
+      face += 3
+    }
+
+    geometry.computeBoundingSphere();
+    geometry.computeFaceNormals();
+    geometry.computeVertexNormals();
+
+    this.mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: '#f70'}));
+    this.el.setObject3D('mesh', this.mesh);
+  },
 
   /**
    * Called when component is attached and when component data changes.
