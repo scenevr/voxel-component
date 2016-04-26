@@ -70,12 +70,10 @@ AFRAME.registerComponent('voxel', {
       }
     }
 
-    var material;
+    var material = new THREE.MeshLambertMaterial();
 
-    if (this.el.components.material) {
+    if (!this.data.color) {
       material = this.el.components.material.material;
-    } else {
-      material = new THREE.MeshLambertMaterial();
     }
 
     material.setValues({
