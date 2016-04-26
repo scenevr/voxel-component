@@ -72,7 +72,7 @@ AFRAME.registerComponent('voxel', {
 
     var material;
 
-    if (this.el.hasAttribute('material')) {
+    if (this.el.components.material) {
       material = this.el.components.material.material;
     } else {
       material = new THREE.MeshLambertMaterial();
@@ -66406,13 +66406,14 @@ function generateArray (vox) {
   assert.equal(data.getUint32(0, true), 542658390)
   assert.equal(data.getUint32(4, true), 150)
 
-  // SIZE
+  // SIZE CHUNK
   assert.equal(data.getUint32(20, true), 1163544915)
 
   var resolutionX = data.getUint32(32, true) + 1
   var resolutionY = data.getUint32(40, true) + 1
   var resolutionZ = data.getUint32(36, true) + 1
 
+  // MAIN CHUNK
   assert.equal(data.getUint32(44, true), 1230657880)
 
   var nbVoxels = data.getUint32(56, true)
