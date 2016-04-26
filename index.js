@@ -67,7 +67,7 @@ AFRAME.registerComponent('voxel', {
 
     var material;
 
-    if (this.el.hasAttribute('material')) {
+    if (this.el.components.material) {
       material = this.el.components.material.material;
     } else {
       material = new THREE.MeshLambertMaterial();
