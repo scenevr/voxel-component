@@ -16,6 +16,7 @@ AFRAME.registerComponent('voxel', {
 
   schema: {
     src: {
+      type: 'src'
     },
     ambientOcclusion: {
       default: true
