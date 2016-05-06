@@ -1,10 +1,9 @@
-/* globals THREE, XMLHttpRequest */
+/* globals AFRAME, THREE, XMLHttpRequest */
 if (typeof AFRAME === 'undefined') {
   throw new Error('Component attempted to register before AFRAME was available.');
 }
 
 var createAOMesh = require('ao-mesher');
-var ndarray = require('ndarray');
 var voxToNdarray = require('vox-to-ndarray');
 var zeros = require('zeros');
 var palette = require('./palette');
@@ -49,7 +48,7 @@ AFRAME.registerComponent('voxel', {
   },
 
   generateMeshFromVoxels: function () {
-    var padding = this.resolution.map((r) => r + 2);
+    var padding = this.resolution.map(function (r) { return r + 2; });
     var voxelsWithPadding = zeros(padding, 'int32');
 
     var x, y, z;
